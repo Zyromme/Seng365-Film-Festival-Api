@@ -1,4 +1,5 @@
 type User = {
+    id: number;
     /**
      * User id as defined by the database
      */

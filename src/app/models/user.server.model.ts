@@ -13,15 +13,16 @@ const insert = async (email: string, firstName: string, lastName: string, passwo
 }
 
 const getOneByEmail = async (email: string): Promise<User[]> => {
-    Logger.info(`Geting user with email: ${email}`);
+    Logger.info(`Getting user with email: ${email}`);
     const conn = await getPool().getConnection();
-    const query = `select * from user where id = ?`;
+    const query = `select * from user where email = ?`;
     const [ result ] = await conn.query(query, [email] );
+    Logger.info(`Result userId is: ${result}`);
     await conn.release;
     return result;
 }
 
-const getUserById = async (id: number): Promise<any> => {
+const getUserById = async (id: number): Promise<any> => {    // Still returns Promise<any>
     Logger.info(`Getting user with id: ${id}`);
     const conn = await getPool().getConnection();
     const query = 'select * from user where id = ?';
@@ -30,4 +31,23 @@ const getUserById = async (id: number): Promise<any> => {
     return result;
 }
 
-export {insert, getOneByEmail, getUserById}
+const login = async (email: string, token: string): Promise<ResultSetHeader> => {
+    Logger.info(`Inserting token to user with email: ${email}`);
+    const conn = await getPool().getConnection();
+    const query = `UPDATE user set auth_token = ? WHERE email = ?`;
+    const [ result ] = await conn.query(query, [ token, email ]);
+    await conn.release();
+    return result;
+}
+
+const logout = async (token: string): Promise<ResultSetHeader> => {
+    Logger.info(`Removing token`);
+    const conn = await getPool().getConnection();
+    const query = `UPDATE user set auth_token = NULL where auth_token = ?`;
+    const [ result ] = await conn.query(query, [ token ]);
+    await conn.release();
+    return result;
+}
+
+
+export {insert, getOneByEmail, getUserById, login, logout}
