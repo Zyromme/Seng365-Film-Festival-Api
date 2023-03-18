@@ -95,7 +95,6 @@ const view = async (req: Request, res: Response): Promise<void> => {
         if (result.length === 0) {
             res.status(404).send('No user with specified ID');
         } else {
-            Logger.http(`USERID: ${result.toString()}`)
             if (result[0].auth_token === token) {
                 // Current user is authenticated and viewing their details
                 res.status( 200 ).send( {"email":result[0].email, "firstName": result[0].first_name, "lastName": result[0].last_name} );

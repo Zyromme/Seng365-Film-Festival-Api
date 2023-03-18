@@ -17,12 +17,11 @@ const getOneByEmail = async (email: string): Promise<User[]> => {
     const conn = await getPool().getConnection();
     const query = `select * from user where email = ?`;
     const [ result ] = await conn.query(query, [email] );
-    Logger.info(`Result userId is: ${result}`);
     await conn.release;
     return result;
 }
 
-const getUserById = async (id: number): Promise<any> => {    // Still returns Promise<any>
+const getUserById = async (id: number): Promise<User[]> => {
     Logger.info(`Getting user with id: ${id}`);
     const conn = await getPool().getConnection();
     const query = 'select * from user where id = ?';
@@ -49,5 +48,14 @@ const logout = async (token: string): Promise<ResultSetHeader> => {
     return result;
 }
 
+const getUserByToken = async (token: string): Promise<User[]> => {
+    Logger.info(`Getting user with token: ${token}`);
+    const conn = await getPool().getConnection();
+    const query = 'select * from user where auth_token = ?';
+    const [ result ] = await conn.query(query, [ token ] );
+    await conn.release();
+    return result;
+}
 
-export {insert, getOneByEmail, getUserById, login, logout}
+
+export {insert, getOneByEmail, getUserById, login, logout, getUserByToken}

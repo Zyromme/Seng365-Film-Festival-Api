@@ -1,9 +1,9 @@
 type User = {
-    id: number;
+
     /**
      * User id as defined by the database
      */
-    user_id: number,
+    id: number,
     /**
      * User's email as entered when created
      */
@@ -12,17 +12,27 @@ type User = {
     /**
      * User's first name
      */
-    firstName: string
+    first_name: string
 
     /**
      * User's Last name
      */
-    lastName: string
+    last_name: string
+
+    /**
+     * User's image filename
+     */
+    image_filename: string
 
     /**
      * User's password
      */
     password: string
+
+    /**
+     * User's authorization token
+     */
+    auth_token: string
 }
 
 type Film = {
