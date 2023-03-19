@@ -54,12 +54,12 @@ type Film = {
     /**
      * Release date of the film
      */
-    releaseDate: number
+    release_date: number
 
     /**
      * Genreid of the genre of the film
      */
-    genreId: number
+    genre_id: number
 
     /**
      * Filename of the image of the film
@@ -74,10 +74,54 @@ type Film = {
     /**
      * Age rating of the film
      */
-    ageRating: string
+    age_rating: string
 
     /**
      * DirectorId of the director of the film
      */
     director_id: number
+}
+
+type Genre = {
+    /**
+     * Id of genre
+     */
+    id: number
+
+    /**
+     * Name of genre
+     */
+    name: string
+}
+
+type FilmReview = {
+    /**
+     * Id of review
+     */
+    id: number
+
+    /**
+     * Id of the film reviewed
+     */
+    film_id: number
+
+    /**
+     * Id of the reviewer
+     */
+    user_id: number
+
+    /**
+     * Rating given to the film
+     */
+    rating: number
+
+    /**
+     * Review given by reviewer
+     */
+    review: string
+
+    /**
+     * Time when the review is sent
+     */
+    timestamp: string
 }

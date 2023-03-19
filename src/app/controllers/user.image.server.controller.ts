@@ -7,12 +7,18 @@ import * as user from "../models/user.server.model";
 
 
 const getImage = async (req: Request, res: Response): Promise<void> => {
+    Logger.http(`GET user ${req.params.id}'s image`);
     const id = req.params.id;
+    const token = req.header("X-Authorization");
     try{
-        const result = image.getOne(parseInt(id, 10));
-        res.statusMessage = "Not Implemented Yet!";
-        res.status(200).send(result);
-        return;
+        const result = await user.getUserById(parseInt(id, 10));
+        if (result[0].image_filename === null) {
+            // user has no image
+
+            res.status(404).send(result[0].image_filename);
+        } else {
+            res.status(200).send(`OK`);
+        }
     } catch (err) {
         Logger.error(err);
         res.statusMessage = "Internal Server Error";
@@ -23,9 +29,11 @@ const getImage = async (req: Request, res: Response): Promise<void> => {
 
 
 const setImage = async (req: Request, res: Response): Promise<void> => {
-    const contentType = req.header("Content-Type")
+    Logger.http(`PATCH setting user ${req.params.id}'s image`)
+    const contentType = req.header("Content-Type");
     const id = req.params.id;
-    const token = req.header("X-Authorization")
+    const imageFile = req.body;
+    const token = req.header("X-Authorization");
     if (token === undefined) {
         res.status(401).send('Unauthorized');
     }
@@ -44,7 +52,8 @@ const setImage = async (req: Request, res: Response): Promise<void> => {
             // Current user is authenticated and viewing their details
             if (result[0].image_filename === null) {
                 // No current image
-                res.status(201).send(`Create. New image created`)
+                await image.setImage(parseInt(id, 10), imageFile);
+                res.status(201).send(`Create. New image created`);
             } else {
                 // Changing image
                 res.status(200).send(`OK. Image updated`)
@@ -63,11 +72,26 @@ const setImage = async (req: Request, res: Response): Promise<void> => {
 
 
 const deleteImage = async (req: Request, res: Response): Promise<void> => {
+    Logger.http(`DELETE register a user with email: ${req.body.email}`)
+    const id = req.params.id;
+    const token = req.header("X-Authorization");
+    if (token === undefined) {
+        res.status(401).send('Unauthorized');
+    }
     try{
+        const result = await user.getUserById(parseInt(id, 10));
+        if (result.length === 0) {
+            res.status(404).send('Not found. No such user with ID given');
+        }
+        if (result[0].auth_token === token) {
+            // Current user is authenticated to delete their image
+            await image.deleteImage(parseInt(id, 10));
+            res.status(200).send(`OK. Image deleted`);
+        } else {
+            // User logged in but trying to delete someone else's image
+            res.status( 403 ).send( `Forbidden. Cannot delete another user's profile photo`);
+        }
         // Your code goes here
-        res.statusMessage = "Not Implemented Yet!";
-        res.status(501).send();
-        return;
     } catch (err) {
         Logger.error(err);
         res.statusMessage = "Internal Server Error";
