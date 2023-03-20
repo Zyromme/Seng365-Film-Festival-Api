@@ -57,5 +57,15 @@ const getUserByToken = async (token: string): Promise<User[]> => {
     return result;
 }
 
+const updateUser = async (userId: number, email: string, firstName: string, lastName: string,
+                          password: string): Promise<User[]> => {
+    Logger.info(`Updating user : ${userId}`);
+    const conn = await getPool().getConnection();
+    const query = `UPDATE user set email = ?, first_name = ?, last_name = ?, password = ? where id = ?`;
+    const [ result ] = await conn.query(query, [ email, firstName, lastName, password, userId ]);
+    await conn.release();
+    return result;
+}
 
-export {insert, getOneByEmail, getUserById, login, logout, getUserByToken}
+
+export {insert, getOneByEmail, getUserById, login, logout, getUserByToken, updateUser}

@@ -115,17 +115,69 @@ const view = async (req: Request, res: Response): Promise<void> => {
 const update = async (req: Request, res: Response): Promise<void> => {
     Logger.http(`PATCH editing user: ${req.body.email}`)
     const validation = await Validator.validate(schemas.user_edit, req.body);
-
     if (validation !== true) {
         res.statusMessage = `Bad Request: ${validation.toString()}`
         res.status(400).send(`Bad Request: ${validation.toString()}`)
         return
     }
-    try{
-        // Your code goes here
-        res.statusMessage = "Not Implemented Yet!";
-        res.status(501).send();
+
+    let email = req.body.email;
+    let firstName = req.body.firstName;
+    let lastName = req.body.lastName;
+    const oldPassword = req.body.currentPassword;
+    let newPassword = req.body.password;
+    const userId = req.params.id;
+    const token = req.header("X-Authorization")
+    if (token == null) {
+        res.status(401).send("Unauthorized");
         return;
+    }
+    try{
+        const userGettingEdited = await user.getUserById(parseInt(userId, 10));
+        if (userGettingEdited.length === 0) {
+            res.status(404).send(`No user with such id`);
+            return;
+        }
+
+        if (userGettingEdited[0].auth_token !== token) {
+            res.status(403).send(`Forbidden. This is not your account`);
+            return;
+        }
+        const emailTested = await user.getOneByEmail(email);
+        if (emailTested.length !== 0) {
+            res.status(403).send(`Forbidden. The email is already in use`);
+            return
+        }
+
+        if (oldPassword !== null) {
+            if (!(await argon2.verify(userGettingEdited[0].password, oldPassword))) {
+                res.status(401).send(`Invalid currentPassword`);
+                return;
+            }
+
+            if (await argon2.verify(userGettingEdited[0].password, newPassword)) {
+                res.status(403).send(`Forbidden. Identical current and new password`);
+                return;
+            }
+        }
+
+        if (email == null) {
+            email = userGettingEdited[0].email;
+        }
+        if (firstName == null) {
+            firstName = userGettingEdited[0].first_name;
+        }
+        if (lastName == null) {
+            lastName = userGettingEdited[0].last_name
+        }
+        if (oldPassword == null) {
+            newPassword = oldPassword;
+        } else {
+            newPassword = await argon2.hash(newPassword);
+        }
+        const userEdited = await user.updateUser(parseInt(userId, 10), email, firstName, lastName, newPassword);
+        res.status(200).send()
+
     } catch (err) {
         Logger.error(err);
         res.statusMessage = "Internal Server Error";
