@@ -35,7 +35,7 @@ const insert = async (title: string, description: string, releaseDate: string, g
 }
 
 const getOneById = async (id: number): Promise<Film[]> => {
-    Logger.info(`Getting film with id: ${id}}`);
+    Logger.info(`Getting film with id: ${id}`);
     const conn = await getPool().getConnection();
     const query = `SELECT * from film where id = ?`;
     const [ result ] = await conn.query( query, [ id ]);
@@ -46,7 +46,7 @@ const getOneById = async (id: number): Promise<Film[]> => {
 const getGenres = async (): Promise<Genre[]> => {
     Logger.info(`Getting all genre's`);
     const conn = await getPool().getConnection();
-    const query = `SELECT * from genre`;
+    const query = `SELECT id as genreId, name from genre`;
     const [ result ] = await conn.query(query);
     await conn.release();
     return result;

@@ -6,6 +6,7 @@ import * as schemas from '../resources/schemas.json';
 import * as film from '../models/film.server.model';
 import * as image from "../models/user.image.model";
 import {getUserById} from "../models/user.server.model";
+import logger from "../../config/logger";
 
 
 const viewAll = async (req: Request, res: Response): Promise<void> => {
@@ -86,6 +87,8 @@ const addOne = async (req: Request, res: Response): Promise<void> => {
         if (releaseDate == null) {
             releaseDate = todayDateRightFormat;
         } else{
+            logger.info(`Release date: ${releaseDate}`);
+            logger.info(`TodayDateRightFormat: ${todayDateRightFormat}`);
             if (releaseDate < todayDateRightFormat) {
                 res.status(403).send(`Forbidden. Cannot release a film in the past`);
                 return;

@@ -3,6 +3,7 @@ import * as schemas from './resources/schemas.json';
 import addFormats from 'ajv-formats';
 const ajv = new Ajv({removeAdditional: 'all', strict: false});
 addFormats(ajv);
+ajv.addFormat("datetime", `/^(\\d{4})-(\\d{2})\\-(\\d{2}) (\\d{2}):(\\d{2}):(\\d{2})$/`)
 
 const validate = async (schema: object, data: any) => {
     try {

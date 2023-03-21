@@ -3,6 +3,7 @@ import Logger from "../../config/logger";
 import * as filmReview from "../models/film.review.model"
 import * as film from "../models/film.server.model";
 import * as user from "../models/user.server.model"
+import logger from "../../config/logger";
 
 const getReviews = async (req: Request, res: Response): Promise<void> => {
     Logger.http(`GET all film ${req.params.id}'s reviews`)
@@ -27,11 +28,13 @@ const getReviews = async (req: Request, res: Response): Promise<void> => {
 
 const addReview = async (req: Request, res: Response): Promise<void> => {
     const filmId = req.params.id;
-    const rating = req.body.review;
+    const rating = req.body.rating;
+    const review = req.body.review;
     const token = req.header("X-Authorization");
     const validRating = [1, 2, 3, 4, 5 ,6 ,7, 8, 9, 10];
     if (!validRating.includes(rating)) {
         res.status(400).send(`Bad Request. Rating must be between 1-10(inclusive)`)
+        return;
     }
     try{
         const filmReviewed = await film.getOneById(parseInt(filmId, 10));
@@ -49,6 +52,8 @@ const addReview = async (req: Request, res: Response): Promise<void> => {
             res.status(401).send('Unauthorized');
             return;
         }
+        logger.info(filmReviewed[0].release_date.toString());
+        logger.info(new Date())
         const todayDate = new Date().toISOString();
         const todayDateRightFormat = todayDate.substring(0, 10) + " " + todayDate.substring(11, 19);
         if (filmReviewed[0].release_date.toString() > todayDateRightFormat) {
@@ -58,6 +63,9 @@ const addReview = async (req: Request, res: Response): Promise<void> => {
         if (filmReviewed[0].director_id === reviewer[0].id) {
             res.status(403).send(`Forbidden. Cannot review your own film`);
         }
+        const result = await filmReview.addReview(parseInt(filmId, 10), reviewer[0].id,
+            rating, review, todayDateRightFormat);
+            res.status(200).send(`Review Created`)
     } catch (err) {
         Logger.error(err);
         res.statusMessage = "Internal Server Error";

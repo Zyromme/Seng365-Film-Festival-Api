@@ -30,6 +30,8 @@ const getImage = async (req: Request, res: Response): Promise<void> => {
 
 const setImage = async (req: Request, res: Response): Promise<void> => {
     Logger.http(`PATCH setting user ${req.params.id}'s image`)
+    const file = require('fs');
+    const fs = file.promises;
     const contentType = req.header("Content-Type");
     const id = req.params.id;
     const imageFile = req.body;
@@ -38,8 +40,24 @@ const setImage = async (req: Request, res: Response): Promise<void> => {
         res.status(401).send('Unauthorized');
     }
     const acceptedType = ["image/png", "image/jpeg", "image/gif"]
-
+    logger.info(`format is:${contentType}`)
+    if (!acceptedType.includes(contentType)) {
+        res.status(400).send(`Bad request. Invalid image supplied (possibly incorrect file type)`)
+        return;
+    }
+    let imageFormat;
+    if (contentType === "image/png") {
+        imageFormat = "png";
+    } else if (contentType === "image/jpeg") {
+        imageFormat = "jpeg";
+    } else if (contentType === "image/gif") {
+        imageFormat = 'gif'
+    }
     try{
+        if(!Buffer.isBuffer(imageFile)) {
+            res.status(400).send(`Bad request. Invalid image supplied (possibly incorrect file type)`)
+            return;
+        }
         const result = await user.getUserById(parseInt(id, 10));
         if (result.length === 0) {
             res.status(404).send('Not found. No such user with ID given');
@@ -49,13 +67,15 @@ const setImage = async (req: Request, res: Response): Promise<void> => {
                 res.status(400).send(`Bad Request. Invalid image supplied (possibly incorrect file type)`);
                 return;
             }
+            const imageFilename = `${id}${token}.${imageFormat}`
+            await fs.writeFile(`storage/images/${imageFilename}`, imageFile);
             // Current user is authenticated and viewing their details
             if (result[0].image_filename === null) {
                 // No current image
-                await image.setImage(parseInt(id, 10), imageFile);
+                await image.setImage(parseInt(id, 10), imageFilename);
                 res.status(201).send(`Create. New image created`);
             } else {
-                // Changing image
+                await image.setImage(parseInt(id, 10), imageFilename);
                 res.status(200).send(`OK. Image updated`)
             }
         } else {
