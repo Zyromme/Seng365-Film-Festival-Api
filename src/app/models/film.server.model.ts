@@ -1,8 +1,8 @@
-import * as schemas from '../resources/schemas.json';
+
 import Logger from "../../config/logger";
 import {getPool} from "../../config/db";
 import {ResultSetHeader} from "mysql2";
-import {describe} from "node:test";
+
 
 
 
@@ -34,7 +34,7 @@ const insert = async (title: string, description: string, releaseDate: string, g
     return result;
 }
 
-const getOneById = async (id: number): Promise<Film[]> => {
+const getOneById = async (id: number): Promise<any> => {
     Logger.info(`Getting film with id: ${id}`);
     const conn = await getPool().getConnection();
     const query = `SELECT * from film where id = ?`;
@@ -70,4 +70,13 @@ const getGenreById = async (id: number): Promise<Genre[]> => {
     return result;
 }
 
-export {getAll, getOneByTitle, insert, getOneById, getGenres, deleteOne, getGenreById}
+const updateFilm = async (filmId: number, title: string, description: string, releaseDate: string, runtime: number, genreId: number, ageRating: string): Promise<Film[]> => {
+    Logger.info(`Updating film ${filmId}`);
+    const conn = await getPool().getConnection();
+    const query = `UPDATE film set title = ?, description = ?, release_date = ?, runtime = ?, genre_id = ?, age_rating = ? where id = ?`;
+    const [ result ] = await conn.query(query, [ title, description, releaseDate, runtime, genreId, ageRating, filmId]);
+    await conn.release();
+    return result;
+}
+
+export {getAll, getOneByTitle, insert, getOneById, getGenres, deleteOne, getGenreById, updateFilm}

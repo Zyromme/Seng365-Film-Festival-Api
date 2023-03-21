@@ -4,10 +4,16 @@ import * as filmReview from "../models/film.review.model"
 import * as film from "../models/film.server.model";
 import * as user from "../models/user.server.model"
 import logger from "../../config/logger";
+import * as Validator from "../validator";
+import * as schemas from "../resources/schemas.json";
 
 const getReviews = async (req: Request, res: Response): Promise<void> => {
     Logger.http(`GET all film ${req.params.id}'s reviews`)
     const id = req.params.id;
+    if (isNaN(parseInt(id, 10))) {
+        res.status(400).send(`Bad request. Id given is not a number`);
+        return;
+    }
     try{
         const result = await filmReview.list(parseInt(id, 10));
         if (result.length === 0) {
@@ -27,6 +33,12 @@ const getReviews = async (req: Request, res: Response): Promise<void> => {
 
 
 const addReview = async (req: Request, res: Response): Promise<void> => {
+    const validation = await Validator.validate(schemas.film_review_post, req.body);
+    if (validation !== true) {
+        res.statusMessage = `Bad Request: ${validation.toString()}`
+        res.status(400).send(`Bad Request: ${validation.toString()}`)
+        return
+    }
     const filmId = req.params.id;
     const rating = req.body.rating;
     const review = req.body.review;
@@ -52,11 +64,13 @@ const addReview = async (req: Request, res: Response): Promise<void> => {
             res.status(401).send('Unauthorized');
             return;
         }
-        logger.info(filmReviewed[0].release_date.toString());
+        logger.info(filmReviewed);
         logger.info(new Date())
         const todayDate = new Date().toISOString();
         const todayDateRightFormat = todayDate.substring(0, 10) + " " + todayDate.substring(11, 19);
-        if (filmReviewed[0].release_date.toString() > todayDateRightFormat) {
+        let releaseDate = filmReviewed[0].release_date.toISOString();
+        releaseDate = releaseDate.substring(0, 10) + " " + releaseDate.substring(11, 19);
+        if (releaseDate > todayDateRightFormat) {
             res.status(403).send(`Forbidden. Cannot post a review on a film that has not yet released`);
             return;
         }
@@ -65,7 +79,7 @@ const addReview = async (req: Request, res: Response): Promise<void> => {
         }
         const result = await filmReview.addReview(parseInt(filmId, 10), reviewer[0].id,
             rating, review, todayDateRightFormat);
-            res.status(200).send(`Review Created`)
+            res.status(201).send(`Review Created`)
     } catch (err) {
         Logger.error(err);
         res.statusMessage = "Internal Server Error";

@@ -1,23 +1,29 @@
 import {Request, Response} from "express";
 import Logger from "../../config/logger";
 import * as image from "../models/user.image.model";
-import * as users from "../models/user.server.model";
-import logger from "../../config/logger";
 import * as user from "../models/user.server.model";
+import path = require("path");
+import file from "fs";
 
 
 const getImage = async (req: Request, res: Response): Promise<void> => {
     Logger.http(`GET user ${req.params.id}'s image`);
     const id = req.params.id;
-    const token = req.header("X-Authorization");
+    if (isNaN(parseInt(id, 10))) {
+        res.status(400).send(`Bad request. Id given is not a number`);
+        return;
+    }
     try{
         const result = await user.getUserById(parseInt(id, 10));
+        if (result.length === 0) {
+            res.status(404).send(`Bad request. No user with such Id`);
+        }
         if (result[0].image_filename === null) {
-            // user has no image
-
-            res.status(404).send(result[0].image_filename);
+            res.status(404).send(`Bad request. User has no Image`);
         } else {
-            res.status(200).send(`OK`);
+            const filename = result[0].image_filename.toLowerCase();
+            const imageFile = path.resolve(`storage/images/${filename}`);
+            res.status(200).sendFile(imageFile);
         }
     } catch (err) {
         Logger.error(err);
@@ -30,17 +36,22 @@ const getImage = async (req: Request, res: Response): Promise<void> => {
 
 const setImage = async (req: Request, res: Response): Promise<void> => {
     Logger.http(`PATCH setting user ${req.params.id}'s image`)
+    // tslint:disable-next-line:no-shadowed-variable
     const file = require('fs');
     const fs = file.promises;
     const contentType = req.header("Content-Type");
     const id = req.params.id;
+    if (isNaN(parseInt(id, 10))) {
+        res.status(400).send(`Bad request. Id given is not a number`);
+        return;
+    }
     const imageFile = req.body;
     const token = req.header("X-Authorization");
     if (token === undefined) {
         res.status(401).send('Unauthorized');
+        return;
     }
     const acceptedType = ["image/png", "image/jpeg", "image/gif"]
-    logger.info(`format is:${contentType}`)
     if (!acceptedType.includes(contentType)) {
         res.status(400).send(`Bad request. Invalid image supplied (possibly incorrect file type)`)
         return;
@@ -67,13 +78,13 @@ const setImage = async (req: Request, res: Response): Promise<void> => {
                 res.status(400).send(`Bad Request. Invalid image supplied (possibly incorrect file type)`);
                 return;
             }
-            const imageFilename = `${id}${token}.${imageFormat}`
+            const imageFilename = `${id}${token}.${imageFormat}`.toLowerCase()
             await fs.writeFile(`storage/images/${imageFilename}`, imageFile);
             // Current user is authenticated and viewing their details
             if (result[0].image_filename === null) {
                 // No current image
                 await image.setImage(parseInt(id, 10), imageFilename);
-                res.status(201).send(`Create. New image created`);
+                res.status(201).send(`Created. New image created`);
             } else {
                 await image.setImage(parseInt(id, 10), imageFilename);
                 res.status(200).send(`OK. Image updated`)
@@ -93,7 +104,12 @@ const setImage = async (req: Request, res: Response): Promise<void> => {
 
 const deleteImage = async (req: Request, res: Response): Promise<void> => {
     Logger.http(`DELETE register a user with email: ${req.body.email}`)
+    const fs = file.promises;
     const id = req.params.id;
+    if (isNaN(parseInt(id, 10))) {
+        res.status(400).send(`Bad request. Id given is not a number`);
+        return;
+    }
     const token = req.header("X-Authorization");
     if (token === undefined) {
         res.status(401).send('Unauthorized');
@@ -105,6 +121,7 @@ const deleteImage = async (req: Request, res: Response): Promise<void> => {
         }
         if (result[0].auth_token === token) {
             // Current user is authenticated to delete their image
+            await fs.unlink(`storage/images/${result[0].image_filename}`)
             await image.deleteImage(parseInt(id, 10));
             res.status(200).send(`OK. Image deleted`);
         } else {

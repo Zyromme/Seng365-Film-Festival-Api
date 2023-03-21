@@ -4,8 +4,7 @@ import * as Validator from "../validator";
 import * as user from "../models/user.server.model"
 import * as schemas from '../resources/schemas.json';
 import * as film from '../models/film.server.model';
-import * as image from "../models/user.image.model";
-import {getUserById} from "../models/user.server.model";
+import * as filmReview from '../models/film.review.model'
 import logger from "../../config/logger";
 
 
@@ -26,6 +25,10 @@ const viewAll = async (req: Request, res: Response): Promise<void> => {
 const getOne = async (req: Request, res: Response): Promise<void> => {
     Logger.http(`GET film ${req.params.id}`)
     const id = req.params.id;
+    if (isNaN(parseInt(id, 10))) {
+        res.status(400).send(`Bad request. Id given is not a number`);
+        return;
+    }
     try{
         const result = await film.getOneById(parseInt(id, 10));
         if (result.length === 0) {
@@ -87,8 +90,6 @@ const addOne = async (req: Request, res: Response): Promise<void> => {
         if (releaseDate == null) {
             releaseDate = todayDateRightFormat;
         } else{
-            logger.info(`Release date: ${releaseDate}`);
-            logger.info(`TodayDateRightFormat: ${todayDateRightFormat}`);
             if (releaseDate < todayDateRightFormat) {
                 res.status(403).send(`Forbidden. Cannot release a film in the past`);
                 return;
@@ -96,7 +97,7 @@ const addOne = async (req: Request, res: Response): Promise<void> => {
         }
         const result = await film.insert(title, description, releaseDate.toString(),
             genreId, runtime, ageRating, directorId);
-        res.status(200).send(`filmId: ${result.insertId}`);
+        res.status(201).send({"filmId": result.insertId});
     } catch (err) {
         Logger.error(err);
         res.statusMessage = "Internal Server Error";
@@ -106,12 +107,111 @@ const addOne = async (req: Request, res: Response): Promise<void> => {
 }
 
 const editOne = async (req: Request, res: Response): Promise<void> => {
-
-    try{
-        // Your code goes here
-        res.statusMessage = "Not Implemented Yet!";
-        res.status(501).send();
+    Logger.http(`PATCH editing film with title: "${req.body.title}`)
+    const validation = await Validator.validate(schemas.film_patch, req.body);
+    if (validation !== true) {
+        res.statusMessage = `Bad Request: ${validation.toString()}`
+        res.status(400).send(`Bad Request: ${validation.toString()}`)
+        return
+    }
+    const filmId = req.params.id
+    if (isNaN(parseInt(filmId, 10))) {
+        res.status(400).send(`Bad request. Id given is not a number`);
         return;
+    }
+    const token = req.header("X-Authorization");
+    let title = req.body.title;
+    let description = req.body.description;
+    let releaseDate = req.body.releaseDate;
+    let genreId = req.body.genreId;
+    let runtime = req.body.runtime;
+    let ageRating = req.body.ageRating;
+    const validAgeRating = ["G", "PG", "M", "R16", "R18", "TBC"];
+    try{
+        // Check if user is logged in
+        if (token === undefined) {
+            res.status(401).send('Unauthorized');
+            return;
+        }
+        const filmEdit = await film.getOneById(parseInt(filmId, 10));
+        // Check age rating
+        logger.info(`Age Rating is ${runtime === undefined}`)
+        if (ageRating !== undefined) {
+            if (!validAgeRating.includes(ageRating)) {
+                res.status(400).send(`Bad request. Invalid age rating`)
+                return;
+            }
+        } else {
+            ageRating = filmEdit[0].age_rating;
+        }
+        // Check if film exists
+        if (filmEdit.length === 0) {
+            res.status(404).send(`No film found with id`);
+            return;
+        }
+        // Check if film has been reviewed
+        const reviewCheck = await filmReview.list(parseInt(filmId, 10));
+        if (reviewCheck.length !== 0) {
+            res.status(403).send(`Forbidden. Cannot edit a film that's already been reviewed`);
+            return;
+        }
+        // Check if the director is requesting edits
+        const editor = await user.getUserByToken(token);
+        if (editor[0].id !== filmEdit[0].director_id) {
+            res.status(403).send(`Forbidden. Only the director may change film details`);
+            return;
+        }
+        // Check if title is valid
+        if (title !== undefined) {
+            const titleCheck = await film.getOneByTitle(title);
+            if (titleCheck.length !== 0) {
+                res.status(400).send(`Forbidden. Film title is not unique`)
+                return;
+            }
+        } else {
+            title = filmEdit[0].title;
+        }
+        // Check genre
+        if (genreId !== undefined) {
+            const genresCheck = await film.getGenreById(genreId);
+            if (genresCheck.length === 0) {
+                res.status(400).send(`Bad request. Invalid genre`)
+                return;
+            }
+        } else {
+            genreId = filmEdit[0].genre_id;
+        }
+        // Check release date
+        let todaysDate = new Date().toISOString();
+        let oldReleaseDate = filmEdit[0].release_date.toISOString();
+        oldReleaseDate = oldReleaseDate.substring(0, 10) + " " + oldReleaseDate.substring(11, 19);
+        todaysDate = todaysDate.substring(0, 10) + " " + todaysDate.substring(11, 19);
+        if (releaseDate !== undefined) {
+            if (oldReleaseDate < todaysDate) {
+                res.status(403).send(`Cannot change the release date since it has already passed`);
+                return;
+            }
+            if (releaseDate < todaysDate) {
+                res.status(403).send(`Cannot release a film in the past`);
+                return;
+            }
+        } else {
+            releaseDate = oldReleaseDate;
+        }
+        // Check description
+        if (description === undefined) {
+            if (description === "") {
+                res.status(400).send(`Bad request. Description cannot be empty`);
+                return;
+            }
+            description = filmEdit[0].description;
+        }
+        // Check runtime
+        if (runtime === undefined) {
+            runtime = filmEdit[0].runtime;
+        }
+        await film.updateFilm(parseInt(filmId, 10), title, description, releaseDate, runtime, genreId, ageRating);
+        res.status(200).send(`OK. Film details edited`)
     } catch (err) {
         Logger.error(err);
         res.statusMessage = "Internal Server Error";
@@ -123,6 +223,10 @@ const editOne = async (req: Request, res: Response): Promise<void> => {
 const deleteOne = async (req: Request, res: Response): Promise<void> => {
     Logger.http(`DELETE film ${req.params.id}`)
     const filmId = req.params.id
+    if (isNaN(parseInt(filmId, 10))) {
+        res.status(400).send(`Bad request. Id given is not a number`);
+        return;
+    }
     const token = req.header("X-Authorization");
     if (token === undefined) {
         res.status(401).send('Unauthorized');

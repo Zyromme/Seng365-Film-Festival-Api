@@ -4,7 +4,7 @@ import * as schemas from '../resources/schemas.json';
 import * as argon2 from "argon2";
 import * as user from '../models/user.server.model';
 import * as Validator from "../validator";
-import {uid, suid} from "rand-token";
+import {uid} from "rand-token";
 
 const register = async (req: Request, res: Response): Promise<void> => {
     Logger.http(`POST register a user with email: ${req.body.email}`)
@@ -89,6 +89,10 @@ const logout = async (req: Request, res: Response): Promise<void> => {
 const view = async (req: Request, res: Response): Promise<void> => {
     Logger.http(`GET single user id: ${req.params.id}`)
     const id = req.params.id;
+    if (isNaN(parseInt(id, 10))) {
+        res.status(400).send(`Bad request. Id given is not a number`);
+        return;
+    }
     const token = req.header("X-Authorization")
     try{
         const result = await user.getUserById( parseInt(id, 10) );
@@ -127,8 +131,12 @@ const update = async (req: Request, res: Response): Promise<void> => {
     const oldPassword = req.body.currentPassword;
     let newPassword = req.body.password;
     const userId = req.params.id;
+    if (isNaN(parseInt(userId, 10))) {
+        res.status(400).send(`Bad request. Id given is not a number`);
+        return;
+    }
     const token = req.header("X-Authorization")
-    if (token == null) {
+    if (token === undefined) {
         res.status(401).send("Unauthorized");
         return;
     }
@@ -149,7 +157,7 @@ const update = async (req: Request, res: Response): Promise<void> => {
             return
         }
 
-        if (oldPassword !== null) {
+        if (oldPassword !== undefined) {
             if (!(await argon2.verify(userGettingEdited[0].password, oldPassword))) {
                 res.status(401).send(`Invalid currentPassword`);
                 return;
@@ -161,16 +169,16 @@ const update = async (req: Request, res: Response): Promise<void> => {
             }
         }
 
-        if (email == null) {
+        if (email === undefined) {
             email = userGettingEdited[0].email;
         }
-        if (firstName == null) {
+        if (firstName === undefined) {
             firstName = userGettingEdited[0].first_name;
         }
-        if (lastName == null) {
+        if (lastName === undefined) {
             lastName = userGettingEdited[0].last_name
         }
-        if (oldPassword == null) {
+        if (oldPassword === undefined) {
             newPassword = oldPassword;
         } else {
             newPassword = await argon2.hash(newPassword);
