@@ -4,7 +4,8 @@ import {getPool} from "../../config/db";
 const list = async (id: number): Promise<FilmReview[]> => {
     Logger.info(`Getting all reviews for film ${id}`);
     const conn = await getPool().getConnection();
-    const query = 'SELECT * from film_review where film_id = ? ORDER BY timestamp DESC';
+    const query = `SELECT FR.user_id as reviewerId, U.first_name as reviewerFirstName, U.last_name as reviewerLastName,
+ FR.rating, review, timestamp from film_review as FR left join user as U on FR.user_id = U.id where film_id = ? ORDER BY timestamp DESC`;
     const [ rows ] = await conn.query(query, [ id ]);
     await conn.release();
     return rows;

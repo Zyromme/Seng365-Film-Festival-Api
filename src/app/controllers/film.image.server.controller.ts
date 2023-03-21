@@ -45,8 +45,6 @@ const setImage = async (req: Request, res: Response): Promise<void> => {
     const fs = file.promises;
     const imageFile = req.body;
     const contentType = req.header("Content-Type");
-    logger.info(`ContentType is ${contentType}`);
-    logger.info(req.header.toString())
     const id = req.params.id;
     if (isNaN(parseInt(id, 10))) {
         res.status(400).send(`Bad request. Id given is not a number`);

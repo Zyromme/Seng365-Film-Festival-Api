@@ -4,8 +4,6 @@ import {getPool} from "../../config/db";
 import {ResultSetHeader} from "mysql2";
 
 
-
-
 const getAll = async (): Promise<Film[]> => {
     Logger.info(`Getting all films from the database`);
     const conn = await getPool().getConnection();
@@ -82,13 +80,23 @@ const updateFilm = async (filmId: number, title: string, description: string, re
 const getFullbyId = async (id: number): Promise<Film[]> => {
     Logger.info(`Getting all details about film ${id}`);
     const conn = await getPool().getConnection();
-    const query = `SELECT F.id, F.title, F.description, F.genre_id as genreId, F.director_id as directorId,
-     U.first_name as directorFirstName, U.last_name as directorLastName, F.release_date, F.age_rating as ageRating,
-      F.runtime, Round(Avg(FR.rating), 2) as rating, count(FR.id) as numReviews from film as F on F.id = FR.film_id left join user as U on
-       F.director_id = U.id join film_review as FR where F.id = ?`
+    const query = `SELECT F.id as filmId, F.title, F.description, F.genre_id as genreId, F.director_id as directorId,
+    U.first_name as directorFirstName, U.last_name as directorLastName, F.release_date as releaseDate, F.age_rating as ageRating,
+    F.runtime, ifNull(cast(Round(Avg(FR.rating), 2) as float), 0) as rating, count(FR.id) as numReviews from film as F left join user as U on F.director_id = U.id join film_review as FR on F.id = FR.film_id where F.id = ?`
     const [ result ] = await conn.query( query, [ id ]);
     await conn.release();
     return result;
 }
 
-export {getAll, getOneByTitle, insert, getOneById, getGenres, deleteOne, getGenreById, updateFilm, getFullbyId}
+const checkGenres = async (ids: any): Promise<any> => {
+    Logger.info(`Checking if all genres exists in the database`);
+    const conn = await getPool().getConnection();
+    let query = "SELECT count (*) from genre where id in ${ids}";
+    const [ result ] await conn.query( query );
+    await conn.release();
+    return result;
+}
+
+
+
+export {getAll, getOneByTitle, insert, getOneById, getGenres, deleteOne, getGenreById, updateFilm, getFullbyId, checkGenres}

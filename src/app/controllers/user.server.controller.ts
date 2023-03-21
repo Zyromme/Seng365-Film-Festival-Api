@@ -49,6 +49,9 @@ const login = async (req: Request, res: Response): Promise<void> => {
     const password = req.body.password;
     try{
         const userLoggingIn = await user.getOneByEmail(email);
+        if (userLoggingIn.length === 0) {
+            res.status(401).send(`Incorrect email/password`);
+        }
         if (await argon2.verify(userLoggingIn[0].password, password)) {
             const token = uid(10);
             const result = await user.login(email, token);

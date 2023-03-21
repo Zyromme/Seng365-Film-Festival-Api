@@ -9,11 +9,25 @@ import logger from "../../config/logger";
 
 
 const viewAll = async (req: Request, res: Response): Promise<void> => {
+    const startIndex = req.params.startIndex;
+    const count = req.params.count;
+    const q = req.params.q;
+    const genreIds = req.params.genreIds;
+    const ageRatings = req.params.ageRatings;
+    const directorId = req.params.directorId;
+    const reviewerId = req.params.reviewerId;
+    const sortBy = req.params.sortBy;
     try{
-        // Your code goes here
-        res.statusMessage = "Not Implemented Yet!";
-        res.status(501).send();
-        return;
+        if (genreIds !== undefined) {
+            const genreCheck = await film.checkGenres(genreIds);
+            }
+        const validAgeRating = ["G", "PG", "M", "R16", "R18", "TBC"];
+        if (ageRatings !== undefined) {
+            if (!validAgeRating.includes(ageRatings)) {
+                res.status(400).send(`Bad Request. Age rating invalid`)
+            }
+        }
+
     } catch (err) {
         Logger.error(err);
         res.statusMessage = "Internal Server Error";
@@ -30,11 +44,12 @@ const getOne = async (req: Request, res: Response): Promise<void> => {
         return;
     }
     try{
-        const result = await film.getFullbyId(parseInt(id, 10));
-        if (result.length === 0) {
+        const existTest = await film.getOneById(parseInt(id, 10));
+        if (existTest.length === 0) {
             res.statusMessage = (`Not found`);
             res.status(404).send(`No film with id ${id}`);
         } else {
+            const result = await film.getFullbyId(parseInt(id, 10));
             res.status(200).send(result[0]);
         }
         return;
@@ -68,8 +83,6 @@ const addOne = async (req: Request, res: Response): Promise<void> => {
     if (!validAgeRating.includes(ageRating)) {
         res.status(400).send(`Bad request. Invalid age rating`);
     }
-    const director = await user.getUserByToken(token);
-    const directorId = director[0].id;
     try{
         const genreInDatabase = await film.getGenreById(genreId);
         if (genreInDatabase.length === 0) {
@@ -80,6 +93,12 @@ const addOne = async (req: Request, res: Response): Promise<void> => {
             res.status(401).send('Unauthorized');
             return;
         }
+        const director = await user.getUserByToken(token);
+        if (director.length === 0) {
+            res.status(401).send(`Unauthorized`);
+            return;
+        }
+        const directorId = director[0].id;
         const testTitle = await film.getOneByTitle(title);
         if (testTitle.length !== 0) {
             res.status(403).send(`Forbidden. Film title is not unique`);
