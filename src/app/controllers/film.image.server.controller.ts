@@ -5,6 +5,8 @@ import * as film from "../models/film.server.model"
 import path from "path";
 import * as image from "../models/film.image.model";
 import logger from "../../config/logger";
+// tslint:disable-next-line:no-var-requires
+const mime = require(`mime`);
 
 
 const getImage = async (req: Request, res: Response): Promise<void> => {
@@ -41,19 +43,20 @@ const setImage = async (req: Request, res: Response): Promise<void> => {
     // tslint:disable-next-line:no-shadowed-variable
     const file = require('fs');
     const fs = file.promises;
-    const contentType = req.headers["content-type"];
+    const imageFile = req.body;
+    const contentType = req.header("Content-Type");
     logger.info(`ContentType is ${contentType}`);
+    logger.info(req.header.toString())
     const id = req.params.id;
     if (isNaN(parseInt(id, 10))) {
         res.status(400).send(`Bad request. Id given is not a number`);
         return;
     }
-    const imageFile = req.body;
     const token = req.header("X-Authorization");
     if (token === undefined) {
         res.status(401).send('Unauthorized');
     }
-    const acceptedType = ["image/png", "image/jpeg", "image/gif"]
+    const acceptedType = ["image/png", "image/jpeg", "image/gif"];
     if (!acceptedType.includes(contentType)) {
         res.status(400).send(`Bad request. Invalid image supplied (possibly incorrect file type)`)
         return;

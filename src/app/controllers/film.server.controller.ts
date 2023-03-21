@@ -30,7 +30,7 @@ const getOne = async (req: Request, res: Response): Promise<void> => {
         return;
     }
     try{
-        const result = await film.getOneById(parseInt(id, 10));
+        const result = await film.getFullbyId(parseInt(id, 10));
         if (result.length === 0) {
             res.statusMessage = (`Not found`);
             res.status(404).send(`No film with id ${id}`);

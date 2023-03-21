@@ -79,4 +79,16 @@ const updateFilm = async (filmId: number, title: string, description: string, re
     return result;
 }
 
-export {getAll, getOneByTitle, insert, getOneById, getGenres, deleteOne, getGenreById, updateFilm}
+const getFullbyId = async (id: number): Promise<Film[]> => {
+    Logger.info(`Getting all details about film ${id}`);
+    const conn = await getPool().getConnection();
+    const query = `SELECT F.id, F.title, F.description, F.genre_id as genreId, F.director_id as directorId,
+     U.first_name as directorFirstName, U.last_name as directorLastName, F.release_date, F.age_rating as ageRating,
+      F.runtime, Round(Avg(FR.rating), 2) as rating, count(FR.id) as numReviews from film as F on F.id = FR.film_id left join user as U on
+       F.director_id = U.id join film_review as FR where F.id = ?`
+    const [ result ] = await conn.query( query, [ id ]);
+    await conn.release();
+    return result;
+}
+
+export {getAll, getOneByTitle, insert, getOneById, getGenres, deleteOne, getGenreById, updateFilm, getFullbyId}
