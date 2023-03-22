@@ -16,18 +16,48 @@ const viewAll = async (req: Request, res: Response): Promise<void> => {
     const ageRatings = req.params.ageRatings;
     const directorId = req.params.directorId;
     const reviewerId = req.params.reviewerId;
-    const sortBy = req.params.sortBy;
+    let sortBy = req.params.sortBy;
     try{
         if (genreIds !== undefined) {
             const genreCheck = await film.checkGenres(genreIds);
+            if  (genreCheck.length !== genreIds.length) {
+                res.status(400).send(`Bad request. Invalid genre id`)
+                return;
             }
+        }
         const validAgeRating = ["G", "PG", "M", "R16", "R18", "TBC"];
         if (ageRatings !== undefined) {
             if (!validAgeRating.includes(ageRatings)) {
-                res.status(400).send(`Bad Request. Age rating invalid`)
+                res.status(400).send(`Bad request. Age rating invalid`)
+                return;
             }
         }
-
+        if (directorId !== undefined) {
+            const directorCheck = await film.getFilmsByDirector(parseInt(directorId, 10));
+            if (directorCheck.length === 0) {
+                res.status(400).send(`Bad request. User ${parseInt(directorId, 10)} has not directed a film`)
+                return;
+            }
+        }
+        if (reviewerId !== undefined) {
+            const reviewerCheck = await filmReview.getReviewsByUser(parseInt(reviewerId, 10));
+            if (reviewerCheck.length === 0) {
+                res.status(400).send(`Bad request. user ${parseInt(reviewerId, 10)} has not reviewed any film`);
+                return;
+            }
+        }
+        const validSortBy = ["ALPHABETICAL_ASC", "ALPHABETICAL_DESC", "RELEASED_ASC", "RELEASED_DESC", "RATING", "RATING_DESC"]
+        if (sortBy !== undefined) {
+            if (!validSortBy.includes(sortBy)) {
+                res.status(400).send(`Bad request. SortBy valid values are only ALPHABETICAL_ASC,
+                 ALPHABETICAL_DESC, RELEASED_ASC, RELEASED_DESC, RATING_ASC, RATING_DESC`)
+                return;
+            }
+        } else {
+            sortBy = "RELEASED_ASC"
+        }
+        const result = await film.getAll(parseInt(startIndex, 10), parseInt(count, 10), q, genreIds,
+            ageRatings, parseInt(directorId, 10), parseInt(reviewerId, 10), sortBy);
     } catch (err) {
         Logger.error(err);
         res.statusMessage = "Internal Server Error";

@@ -21,4 +21,13 @@ const addReview = async (filmId: number, userId: number, rating: number,
     return result;
 }
 
-export {list, addReview}
+const getReviewsByUser = async (id: number): Promise<FilmReview[]> => {
+    Logger.info(`Getting all films reviewed by user ${id}`);
+    const conn = await getPool().getConnection();
+    const query = `SELECT * from film_review where user_id = ?`;
+    const [ result ] = await conn.query(query, [ id ]);
+    await conn.release();
+    return result;
+}
+
+export {list, addReview, getReviewsByUser}
