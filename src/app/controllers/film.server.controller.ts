@@ -17,6 +17,14 @@ const viewAll = async (req: Request, res: Response): Promise<void> => {
     const directorId = req.params.directorId;
     const reviewerId = req.params.reviewerId;
     let sortBy = req.params.sortBy;
+    Logger.info(`StartIndex: ${startIndex}`);
+    Logger.info(`Count: ${count}`);
+    Logger.info(`q: ${q}`);
+    Logger.info(`genreIds: ${genreIds}`);
+    Logger.info(`ageRateings: ${ageRatings}`);
+    Logger.info(`DirectorId: ${directorId}`);
+    Logger.info(`ReviewerId: ${reviewerId}`);
+    Logger.info(`SortBy: ${sortBy}`);
     try{
         if (genreIds !== undefined) {
             const genreCheck = await film.checkGenres(genreIds);
@@ -58,6 +66,7 @@ const viewAll = async (req: Request, res: Response): Promise<void> => {
         }
         const result = await film.getAll(parseInt(startIndex, 10), parseInt(count, 10), q, genreIds,
             ageRatings, parseInt(directorId, 10), parseInt(reviewerId, 10), sortBy);
+        res.status(200).send(result)
     } catch (err) {
         Logger.error(err);
         res.statusMessage = "Internal Server Error";

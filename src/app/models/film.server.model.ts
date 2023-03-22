@@ -4,6 +4,7 @@ import {getPool} from "../../config/db";
 import {ResultSetHeader} from "mysql2";
 import {generate} from "rand-token";
 import Query from "mysql2/typings/mysql/lib/protocol/sequences/Query";
+import logger from "../../config/logger";
 
 
 const getAll = async (startIndex: number, count: number, q: string, genreIds:any, ageRatings: any,
@@ -12,11 +13,11 @@ const getAll = async (startIndex: number, count: number, q: string, genreIds:any
     const conn = await getPool().getConnection();
     let query = 'SELECT F.id as filmId, F.title, F.genre_id as genreId, F.age_rating as ageRating, F.director_id' +
         ' as directorId, U.first_name as directorFirstName, U.last_name as directorLastName, F.release_date as' +
-        ' releaseDate, ifNull(cast(ROUND(FR.rating, 2) as float), 0) as rating from film as F left join user as U on ' +
+        ' releaseDate, cast(round(ifNull(FR.rating, 0), 2) as float) as rating from film as F left join user as U on ' +
         'F.director_id = U.id ';
 
     // if defined, only films reviewed by reviewerId is retrieved
-    if (reviewerId !== undefined) {
+    if (!isNaN(reviewerId)) {
         query += `right join (SELECT film_id, Avg(rating) as rating from film_review where
          user_id = ${reviewerId} group by film_id)`;
     } else {
@@ -76,7 +77,7 @@ const getAll = async (startIndex: number, count: number, q: string, genreIds:any
     }
 
     // if defined, only films directed by directorId is retrieved
-    if (directorId !== undefined) {
+    if (!isNaN(directorId)) {
         if (first) {
             query += ` where director_id = ${directorId}`;
         } else {
@@ -102,21 +103,11 @@ const getAll = async (startIndex: number, count: number, q: string, genreIds:any
     } else {
         query += " order by F.release_date";
     }
+    logger.info(query);
 
     const [ rows ] = await conn.query(query);
     await conn.release();
 
-    if (startIndex === undefined){
-        startIndex = 0;
-    }
-    if (startIndex === count) {
-        count = +startIndex + +count;
-    }
-    if (count !== undefined) {
-        return rows.slice(startIndex, count);
-    } else {
-        return rows.slice(startIndex);
-    }
     return rows;
 }
 
@@ -204,6 +195,7 @@ const getFullbyId = async (id: number): Promise<Film[]> => {
 const checkGenres = async (ids: any): Promise<any> => {
     Logger.info(`Checking if all genres exists in the database`);
     const conn = await getPool().getConnection();
+    Logger.info(`ids are ${ids}`)
     const query = "SELECT count (*) from genre where id in ${ids}";
     const [ result ] = await conn.query( query );
     await conn.release();
