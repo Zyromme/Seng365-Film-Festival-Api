@@ -6,26 +6,34 @@ import * as schemas from '../resources/schemas.json';
 import * as film from '../models/film.server.model';
 import * as filmReview from '../models/film.review.model'
 import logger from "../../config/logger";
+import {checkRatings} from "../models/film.server.model";
 
 
 const viewAll = async (req: Request, res: Response): Promise<void> => {
-    const startIndex = req.params.startIndex;
-    const count = req.params.count;
-    const q = req.params.q;
-    const genreIds = req.params.genreIds;
-    const ageRatings = req.params.ageRatings;
-    const directorId = req.params.directorId;
-    const reviewerId = req.params.reviewerId;
-    let sortBy = req.params.sortBy;
-    Logger.info(`StartIndex: ${startIndex}`);
-    Logger.info(`Count: ${count}`);
-    Logger.info(`q: ${q}`);
-    Logger.info(`genreIds: ${genreIds}`);
-    Logger.info(`ageRateings: ${ageRatings}`);
-    Logger.info(`DirectorId: ${directorId}`);
-    Logger.info(`ReviewerId: ${reviewerId}`);
-    Logger.info(`SortBy: ${sortBy}`);
+    const validation = await Validator.validate(schemas.film_search, req.body);
+    if (validation !== true) {
+        res.statusMessage = `Bad Request: ${validation.toString()}`
+        res.status(400).send(`Bad Request: ${validation.toString()}`)
+        return
+    }
     try{
+        const startIndex = req.params.startIndex as string;
+        const count = req.params.count as string;
+        const q = req.query.q as string;
+        const genreIds = req.query.genreIds;
+        const ageRatings = req.query.ageRatings;
+        const directorId = req.query.directorId as string;
+        const reviewerId = req.query.reviewerId as string;
+        let sortBy = req.query.sortBy as string;
+        Logger.info(`Query is ` + req.query.toString())
+        Logger.info(`StartIndex: ${startIndex}`);
+        Logger.info(`Count: ${count}`);
+        Logger.info(`q: ${q}`);
+        Logger.info(`genreIds: ${genreIds}`);
+        Logger.info(`ageRateings: ${typeof ageRatings}`);
+        Logger.info(`DirectorId: ${directorId}`);
+        Logger.info(`ReviewerId: ${reviewerId}`);
+        Logger.info(`SortBy: ${sortBy}`);
         if (genreIds !== undefined) {
             const genreCheck = await film.checkGenres(genreIds);
             if  (genreCheck.length !== genreIds.length) {
@@ -33,12 +41,13 @@ const viewAll = async (req: Request, res: Response): Promise<void> => {
                 return;
             }
         }
-        const validAgeRating = ["G", "PG", "M", "R16", "R18", "TBC"];
+
         if (ageRatings !== undefined) {
-            if (!validAgeRating.includes(ageRatings)) {
+            if (!checkRatings(ageRatings)) {
                 res.status(400).send(`Bad request. Age rating invalid`)
                 return;
             }
+
         }
         if (directorId !== undefined) {
             const directorCheck = await film.getFilmsByDirector(parseInt(directorId, 10));
@@ -66,7 +75,7 @@ const viewAll = async (req: Request, res: Response): Promise<void> => {
         }
         const result = await film.getAll(parseInt(startIndex, 10), parseInt(count, 10), q, genreIds,
             ageRatings, parseInt(directorId, 10), parseInt(reviewerId, 10), sortBy);
-        res.status(200).send(result)
+        res.status(200).send({"films": result, "count": result.length})
     } catch (err) {
         Logger.error(err);
         res.statusMessage = "Internal Server Error";
