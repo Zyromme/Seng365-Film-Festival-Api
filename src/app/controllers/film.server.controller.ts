@@ -5,7 +5,6 @@ import * as user from "../models/user.server.model"
 import * as schemas from '../resources/schemas.json';
 import * as film from '../models/film.server.model';
 import * as filmReview from '../models/film.review.model'
-import logger from "../../config/logger";
 import {checkRatings} from "../models/film.server.model";
 
 
@@ -177,7 +176,7 @@ const addOne = async (req: Request, res: Response): Promise<void> => {
 }
 
 const editOne = async (req: Request, res: Response): Promise<void> => {
-    Logger.http(`PATCH editing film with title: "${req.body.title}`)
+    Logger.http(`PATCH editing film: ${req.params.id}`)
     const validation = await Validator.validate(schemas.film_patch, req.body);
     if (validation !== true) {
         res.statusMessage = `Bad Request: ${validation.toString()}`
@@ -205,7 +204,6 @@ const editOne = async (req: Request, res: Response): Promise<void> => {
         }
         const filmEdit = await film.getOneById(parseInt(filmId, 10));
         // Check age rating
-        logger.info(`Age Rating is ${runtime === undefined}`)
         if (ageRating !== undefined) {
             if (!validAgeRating.includes(ageRating)) {
                 res.status(400).send(`Bad request. Invalid age rating`)
@@ -252,10 +250,8 @@ const editOne = async (req: Request, res: Response): Promise<void> => {
             genreId = filmEdit[0].genre_id;
         }
         // Check release date
-        let todaysDate = new Date().toISOString();
-        let oldReleaseDate = filmEdit[0].release_date.toISOString();
-        oldReleaseDate = oldReleaseDate.substring(0, 10) + " " + oldReleaseDate.substring(11, 19);
-        todaysDate = todaysDate.substring(0, 10) + " " + todaysDate.substring(11, 19);
+        const todaysDate = new Date(Date.now());
+        const oldReleaseDate = new Date(filmEdit[0].release_date);
         if (releaseDate !== undefined) {
             if (oldReleaseDate < todaysDate) {
                 res.status(403).send(`Cannot change the release date since it has already passed`);
@@ -266,7 +262,7 @@ const editOne = async (req: Request, res: Response): Promise<void> => {
                 return;
             }
         } else {
-            releaseDate = oldReleaseDate;
+                releaseDate = oldReleaseDate;
         }
         // Check description
         if (description === undefined) {
@@ -309,7 +305,7 @@ const deleteOne = async (req: Request, res: Response): Promise<void> => {
         }
         if (filmToDelete[0].director_id === userLoggedIn[0].id) {
             // User is the director of the film he/she is trying to delete
-            const result = await film.deleteOne(parseInt(filmId, 10));
+            await film.deleteOne(parseInt(filmId, 10));
             res.status(200).send(`OK. Film deleted`)
         } else {
             // User logged in but viewing someone else's image
