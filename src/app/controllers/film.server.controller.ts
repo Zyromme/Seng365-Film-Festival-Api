@@ -10,30 +10,21 @@ import {checkRatings} from "../models/film.server.model";
 
 
 const viewAll = async (req: Request, res: Response): Promise<void> => {
-    const validation = await Validator.validate(schemas.film_search, req.body);
+    const validation = await Validator.validate(schemas.film_search, req.query);
     if (validation !== true) {
         res.statusMessage = `Bad Request: ${validation.toString()}`
         res.status(400).send(`Bad Request: ${validation.toString()}`)
         return
     }
     try{
-        const startIndex = req.params.startIndex as string;
-        const count = req.params.count as string;
+        let startIndex = parseInt(req.query.startIndex as string, 10);
+        let count = parseInt(req.query.count as string, 10);
         const q = req.query.q as string;
         const genreIds = req.query.genreIds;
         const ageRatings = req.query.ageRatings;
         const directorId = req.query.directorId as string;
         const reviewerId = req.query.reviewerId as string;
         let sortBy = req.query.sortBy as string;
-        Logger.info(`Query is ` + req.query.toString())
-        Logger.info(`StartIndex: ${startIndex}`);
-        Logger.info(`Count: ${count}`);
-        Logger.info(`q: ${q}`);
-        Logger.info(`genreIds: ${genreIds}`);
-        Logger.info(`ageRateings: ${typeof ageRatings}`);
-        Logger.info(`DirectorId: ${directorId}`);
-        Logger.info(`ReviewerId: ${reviewerId}`);
-        Logger.info(`SortBy: ${sortBy}`);
         if (genreIds !== undefined) {
             const genreCheck = await film.checkGenres(genreIds);
             if  (genreCheck.length !== genreIds.length) {
@@ -73,9 +64,21 @@ const viewAll = async (req: Request, res: Response): Promise<void> => {
         } else {
             sortBy = "RELEASED_ASC"
         }
-        const result = await film.getAll(parseInt(startIndex, 10), parseInt(count, 10), q, genreIds,
+        const result = await film.getAll(q, genreIds,
             ageRatings, parseInt(directorId, 10), parseInt(reviewerId, 10), sortBy);
-        res.status(200).send({"films": result, "count": result.length})
+
+        if (isNaN(startIndex)) {
+            startIndex = 0
+        }
+        if (!isNaN(count)) {
+            count += startIndex;
+        } else {
+            count = result.length;
+        }
+        if (count > (result.length - startIndex)) {
+            count = result.length + 1;
+        }
+        res.status(200).send({"films": result.slice(startIndex, count), "count": result.length})
     } catch (err) {
         Logger.error(err);
         res.statusMessage = "Internal Server Error";

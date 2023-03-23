@@ -5,7 +5,7 @@ import {ResultSetHeader} from "mysql2";
 import logger from "../../config/logger";
 
 
-const getAll = async (startIndex: number, count: number, q: string, genreIds:any, ageRatings: any,
+const getAll = async (q: string, genreIds:any, ageRatings: any,
                       directorId: number, reviewerId: number, sortBy: any): Promise<Film[]> => {
     Logger.info(`Getting all films from the database`);
     const conn = await getPool().getConnection();
@@ -16,8 +16,7 @@ const getAll = async (startIndex: number, count: number, q: string, genreIds:any
 
     // if defined, only films reviewed by reviewerId is retrieved
     if (!isNaN(reviewerId)) {
-        query += `right join (SELECT film_id, Avg(rating) as rating from film_review where
-         user_id = ${reviewerId} group by film_id)`;
+        query += `right join (SELECT film_id, Avg(rating) as rating from film_review where user_id = ${reviewerId} group by film_id)`;
     } else {
         query += 'left join (SELECT film_id, Avg(rating) as rating from film_review group by film_id)';
     }
