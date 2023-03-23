@@ -12,15 +12,14 @@ const getAll = async (q: string, genreIds:any, ageRatings: any,
     let query = 'SELECT F.id as filmId, F.title, F.genre_id as genreId, F.director_id as directorId, U.first_name' +
         ' as directorFirstName, U.last_name as directorLastName, F.release_date as releaseDate, F.age_rating as ' +
         'ageRating, cast(round(ifNull(FR.rating, 0), 2) as float) as rating from film as F left join user as U on ' +
-        'F.director_id = U.id ';
+        'F.director_id = U.id left join (SELECT film_id, Avg(rating) as rating from film_review group by film_id)' +
+        ' as FR on F.id = FR.film_id ';
 
     // if defined, only films reviewed by reviewerId is retrieved
     if (!isNaN(reviewerId)) {
-        query += `right join (SELECT film_id, Avg(rating) as rating from film_review where user_id = ${reviewerId} group by film_id)`;
-    } else {
-        query += 'left join (SELECT film_id, Avg(rating) as rating from film_review group by film_id)';
+        query += `inner join (SELECT film_id from film_review where user_id = ${reviewerId}) as FRU on F.id = FRU.film_id`;
     }
-    query += ' as FR on F.id = FR.film_id';
+
     let first = true;
 
     // if defined, adds search title and description query
@@ -178,7 +177,7 @@ const getFullbyId = async (id: number): Promise<Film[]> => {
     const query = 'SELECT F.id as filmId, F.title, F.description, F.genre_id as genreId, F.director_id as directorId,' +
         ' U.first_name as directorFirstName, U.last_name as directorLastName, F.release_date as releaseDate,' +
         ' F.age_rating as ageRating, F.runtime, cast(round(ifNull(FR.rating, 0), 2) as float) as rating,' +
-        ' FR.numReviews from film as F left join user as U on F.director_id = U.id left join (Select film_id, ' +
+        ' ifNull(FR.numReviews, 0) as numReviews from film as F left join user as U on F.director_id = U.id left join (Select film_id, ' +
         'Avg(rating) as rating, count(*) as numReviews from film_review group by film_id)' +
         ' as FR on F.id = FR.film_id where F.id = ?';
     const [ result ] = await conn.query( query, [ id ]);
