@@ -23,11 +23,12 @@ const register = async (req: Request, res: Response): Promise<void> => {
         const testEmail = await user.getOneByEmail(email);
         if (testEmail.length !== 0) {
             res.status(403).send("Forbidden. Email already in use.")
-            return
+            return;
         }
         const hashedPass = await argon2.hash(password);
         const result = await user.insert( email, firstName, lastName, hashedPass);
         res.status( 201 ).send({"userId": result.insertId} );
+        return;
     } catch (err) {
         Logger.error(err);
         res.statusMessage = "Internal Server Error";
@@ -51,16 +52,19 @@ const login = async (req: Request, res: Response): Promise<void> => {
         const userLoggingIn = await user.getOneByEmail(email);
         if (userLoggingIn.length === 0) {
             res.status(401).send(`Incorrect email/password`);
+            return;
         }
         if (await argon2.verify(userLoggingIn[0].password, password)) {
             const token = uid(10);
             const result = await user.login(email, token);
             if (result.affectedRows === 1) {
                 res.status( 200 ).send({"userId": userLoggingIn[0].id, "token": token} );
+                return;
             }
         } else {
             res.statusMessage = `Not Authorised`
             res.status(401).send(`Incorrect email/password`)
+            return;
         }
     } catch (err) {
         Logger.error(err);
@@ -78,8 +82,10 @@ const logout = async (req: Request, res: Response): Promise<void> => {
         if (result.changedRows === 0) {
             res.statusMessage = `Not Authorised`;
             res.status(401).send(`Cannot log out if you are not authenticated`);
+            return;
         } else {
             res.status(200).send(`Logged out successfully`);
+            return;
         }
     } catch (err) {
         Logger.error(err);
@@ -101,13 +107,16 @@ const view = async (req: Request, res: Response): Promise<void> => {
         const result = await user.getUserById( parseInt(id, 10) );
         if (result.length === 0) {
             res.status(404).send('No user with specified ID');
+            return;
         } else {
             if (result[0].auth_token === token) {
                 // Current user is authenticated and viewing their details
                 res.status( 200 ).send( {"email":result[0].email, "firstName": result[0].first_name, "lastName": result[0].last_name} );
+                return;
             } else {
                 // User not logged in or viewing other user
                 res.status( 200 ).send( {"firstName": result[0].first_name, "lastName": result[0].last_name} );
+                return;
             }
         }
     } catch (err) {
@@ -188,6 +197,7 @@ const update = async (req: Request, res: Response): Promise<void> => {
         }
         const userEdited = await user.updateUser(parseInt(userId, 10), email, firstName, lastName, newPassword);
         res.status(200).send()
+        return;
 
     } catch (err) {
         Logger.error(err);

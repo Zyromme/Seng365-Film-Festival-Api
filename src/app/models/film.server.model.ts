@@ -96,7 +96,6 @@ const getAll = async (q: string, genreIds:any, ageRatings: any,
         query += " order by F.release_date";
     }
     query += " , filmId"
-    logger.info(query);
 
     const [ result ] = await conn.query(query);
     await conn.release();

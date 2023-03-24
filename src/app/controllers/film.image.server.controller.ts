@@ -26,6 +26,7 @@ const getImage = async (req: Request, res: Response): Promise<void> => {
             const filename = result[0].image_filename.toLowerCase();
             const imageFile = path.resolve(`storage/images/${filename}`);
             res.status(200).sendFile(imageFile);
+            return;
         }
     } catch (err) {
         Logger.error(err);
@@ -50,6 +51,7 @@ const setImage = async (req: Request, res: Response): Promise<void> => {
     const token = req.header("X-Authorization");
     if (token === undefined) {
         res.status(401).send('Unauthorized');
+        return;
     }
     const acceptedType = ["image/png", "image/jpeg", "image/gif"];
     if (!acceptedType.includes(contentType)) {
@@ -72,6 +74,7 @@ const setImage = async (req: Request, res: Response): Promise<void> => {
         const result = await film.getOneById(parseInt(id, 10));
         if (result.length === 0) {
             res.status(404).send('Not found. No film with such Id');
+            return;
         }
         const editor = await user.getUserByToken(token);
         if (editor[0].id === result[0].director_id) {
@@ -86,13 +89,16 @@ const setImage = async (req: Request, res: Response): Promise<void> => {
                 // No current image
                 await image.setImage(parseInt(id, 10), imageFilename);
                 res.status(201).send(`Created. New image created`);
+                return;
             } else {
                 await image.setImage(parseInt(id, 10), imageFilename);
                 res.status(200).send(`OK. Image updated`)
+                return;
             }
         } else {
             // User logged in but not the director of the film
             res.status( 403 ).send( `Forbidden. Only the director of a film can change the hero image`);
+            return;
         }
     } catch (err) {
         Logger.error(err);

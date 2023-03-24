@@ -12,11 +12,11 @@ const list = async (id: number): Promise<FilmReview[]> => {
 }
 
 const addReview = async (filmId: number, userId: number, rating: number,
-                         review: string, timestamp: string): Promise<FilmReview[]> => {
+                         review: string): Promise<FilmReview[]> => {
     Logger.info(`Adding a review for film ${filmId}`);
     const conn = await getPool().getConnection();
-    const query = `INSERT into film_review (film_id, user_id, rating, review, timestamp) values (?, ?, ?, ?, ?)`;
-    const [ result ] = await conn.query(query, [ filmId, userId, rating, review, timestamp ]);
+    const query = `INSERT into film_review (film_id, user_id, rating, review) values (?, ?, ?, ?)`;
+    const [ result ] = await conn.query(query, [ filmId, userId, rating, review ]);
     await conn.release();
     return result;
 }

@@ -53,7 +53,7 @@ const setImage = async (req: Request, res: Response): Promise<void> => {
     }
     const acceptedType = ["image/png", "image/jpeg", "image/gif"]
     if (!acceptedType.includes(contentType)) {
-        res.status(400).send(`Bad request. Invalid image supplied (possibly incorrect file type)`)
+        res.status(400).send(`Bad request. Invalid image supplied (possibly incorrect file type)`);
         return;
     }
     let imageFormat;
@@ -66,12 +66,13 @@ const setImage = async (req: Request, res: Response): Promise<void> => {
     }
     try{
         if(!Buffer.isBuffer(imageFile)) {
-            res.status(400).send(`Bad request. Invalid image supplied (possibly incorrect file type)`)
+            res.status(400).send(`Bad request. Invalid image supplied (possibly incorrect file type)`);
             return;
         }
         const result = await user.getUserById(parseInt(id, 10));
         if (result.length === 0) {
             res.status(404).send('Not found. No such user with ID given');
+            return;
         }
         if (result[0].auth_token === token) {
             if (!acceptedType.includes(contentType)) {
@@ -92,6 +93,7 @@ const setImage = async (req: Request, res: Response): Promise<void> => {
         } else {
             // User logged in but viewing someone else's image
             res.status( 403 ).send( `Forbidden. Can not change another user's profile photo`);
+            return;
         }
     } catch (err) {
         Logger.error(err);
@@ -103,7 +105,7 @@ const setImage = async (req: Request, res: Response): Promise<void> => {
 
 
 const deleteImage = async (req: Request, res: Response): Promise<void> => {
-    Logger.http(`DELETE register a user with email: ${req.body.email}`)
+    Logger.http(`DELETE profile picture of user with email: ${req.body.email}`)
     const fs = file.promises;
     const id = req.params.id;
     if (isNaN(parseInt(id, 10))) {
@@ -113,6 +115,7 @@ const deleteImage = async (req: Request, res: Response): Promise<void> => {
     const token = req.header("X-Authorization");
     if (token === undefined) {
         res.status(401).send('Unauthorized');
+        return;
     }
     try{
         const result = await user.getUserById(parseInt(id, 10));

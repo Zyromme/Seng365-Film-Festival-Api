@@ -78,6 +78,7 @@ const viewAll = async (req: Request, res: Response): Promise<void> => {
             count = result.length + 1;
         }
         res.status(200).send({"films": result.slice(startIndex, count), "count": result.length})
+        return;
     } catch (err) {
         Logger.error(err);
         res.statusMessage = "Internal Server Error";
@@ -98,11 +99,12 @@ const getOne = async (req: Request, res: Response): Promise<void> => {
         if (existTest.length === 0) {
             res.statusMessage = (`Not found`);
             res.status(404).send(`No film with id ${id}`);
+            return;
         } else {
             const result = await film.getFullbyId(parseInt(id, 10));
             res.status(200).send(result[0]);
+            return;
         }
-        return;
     } catch (err) {
         Logger.error(err);
         res.statusMessage = "Internal Server Error";
@@ -132,6 +134,7 @@ const addOne = async (req: Request, res: Response): Promise<void> => {
     }
     if (!validAgeRating.includes(ageRating)) {
         res.status(400).send(`Bad request. Invalid age rating`);
+        return;
     }
     try{
         const genreInDatabase = await film.getGenreById(genreId);
@@ -167,6 +170,7 @@ const addOne = async (req: Request, res: Response): Promise<void> => {
         const result = await film.insert(title, description, releaseDate.toString(),
             genreId, runtime, ageRating, directorId);
         res.status(201).send({"filmId": result.insertId});
+        return;
     } catch (err) {
         Logger.error(err);
         res.statusMessage = "Internal Server Error";
@@ -278,6 +282,7 @@ const editOne = async (req: Request, res: Response): Promise<void> => {
         }
         await film.updateFilm(parseInt(filmId, 10), title, description, releaseDate, runtime, genreId, ageRating);
         res.status(200).send(`OK. Film details edited`)
+        return;
     } catch (err) {
         Logger.error(err);
         res.statusMessage = "Internal Server Error";
@@ -296,20 +301,24 @@ const deleteOne = async (req: Request, res: Response): Promise<void> => {
     const token = req.header("X-Authorization");
     if (token === undefined) {
         res.status(401).send('Unauthorized');
+        return;
     }
     try{
         const userLoggedIn = await user.getUserByToken(token);
         const filmToDelete = await film.getOneById(parseInt(filmId, 10));
         if (filmToDelete.length === 0) {
             res.status(404).send('Not found. No such film with ID given');
+            return;
         }
         if (filmToDelete[0].director_id === userLoggedIn[0].id) {
             // User is the director of the film he/she is trying to delete
             await film.deleteOne(parseInt(filmId, 10));
             res.status(200).send(`OK. Film deleted`)
+            return;
         } else {
             // User logged in but viewing someone else's image
             res.status( 403 ).send( `Forbidden. Only the director of the film can delete it`);
+            return;
         }
     } catch (err) {
         Logger.error(err);

@@ -3,7 +3,6 @@ import Logger from "../../config/logger";
 import * as filmReview from "../models/film.review.model"
 import * as film from "../models/film.server.model";
 import * as user from "../models/user.server.model"
-import logger from "../../config/logger";
 import * as Validator from "../validator";
 import * as schemas from "../resources/schemas.json";
 
@@ -64,13 +63,9 @@ const addReview = async (req: Request, res: Response): Promise<void> => {
             res.status(401).send('Unauthorized');
             return;
         }
-        logger.info(filmReviewed);
-        logger.info(new Date())
-        const todayDate = new Date().toISOString();
-        const todayDateRightFormat = todayDate.substring(0, 10) + " " + todayDate.substring(11, 19);
-        let releaseDate = filmReviewed[0].release_date.toISOString();
-        releaseDate = releaseDate.substring(0, 10) + " " + releaseDate.substring(11, 19);
-        if (releaseDate > todayDateRightFormat) {
+        const todayDate = new Date(Date.now());
+        const releaseDate = new Date(filmReviewed[0].release_date);
+        if (releaseDate > todayDate) {
             res.status(403).send(`Forbidden. Cannot post a review on a film that has not yet released`);
             return;
         }
@@ -78,7 +73,7 @@ const addReview = async (req: Request, res: Response): Promise<void> => {
             res.status(403).send(`Forbidden. Cannot review your own film`);
         }
         const result = await filmReview.addReview(parseInt(filmId, 10), reviewer[0].id,
-            rating, review, todayDateRightFormat);
+            rating, review);
             res.status(201).send(`Review Created`)
     } catch (err) {
         Logger.error(err);
