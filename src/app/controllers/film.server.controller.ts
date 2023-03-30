@@ -162,6 +162,11 @@ const addOne = async (req: Request, res: Response): Promise<void> => {
         if (releaseDate == null) {
             releaseDate = todayDateRightFormat;
         } else{
+            const timestamp = Date.parse(releaseDate);
+            if (isNaN(timestamp) !== false) {
+                res.status(400).send(`Bad request. Invalid date`);
+                return;
+            }
             if (releaseDate < todayDateRightFormat) {
                 res.status(403).send(`Forbidden. Cannot release a film in the past`);
                 return;
